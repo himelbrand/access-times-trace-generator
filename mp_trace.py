@@ -32,6 +32,7 @@ def mp_generator(m,p,b):
     if m == 'rr':
         i = -1
         def next_p(_):
+            nonlocal i
             i = (i+1)%len(p)
             return p[i]
         return next_p
@@ -47,6 +48,7 @@ def mp_generator(m,p,b):
     if m == 'fixed-rr':
         i = -1
         def next_p(line):
+            nonlocal i
             pen = pen_d.get(line)
             if pen == None:
                 i = (i+1)%len(p)
@@ -81,8 +83,8 @@ def parse_args(argc):
     try:
         i = sys.argv.index('-p') + 1
         if argc < i:
-            raise Exception('Usage of penalties: -p N1|N2|N3|N4|..,|Nk , Ni is a integer representing a miss penalty')
-        penalties = [p+'\n' for p in sys.argv[i].split('|')] 
+            raise Exception('Usage of penalties: -p N1#N2#N3#N4#..,#Nk , Ni is a integer representing a miss penalty')
+        penalties = [p+'\n' for p in sys.argv[i].split('#')] 
         if len(penalties) < 1:
             raise Exception('Usage of penalties: must contain et least one miss penalty value')
     except ValueError:
@@ -110,20 +112,21 @@ def parse_args(argc):
         mode = sys.argv[i]
         if not (mode in valid_modes):
             raise Exception('Usage of mp mode: -m <mode> , <mode> is one of: [random,rr,fixed-rr,fixed-rand,brandom]')
-        if mode == 'brandom' and argc < i+1:
-            raise Exception('Usage of mp mode - brandom: -m brandom <bias> , <bias> is of the form B1|B2|...|Bk where k is the number of penalties and Bi is an integer')
-        randbias =  [int(p) for p in sys.argv[i+1].split('|')]
-        if len(randbias) != len(penalties):
-            raise Exception('Usage of mp mode - brandom: -m brandom <bias> , <bias> is of the form B1|B2|...|Bk where k is the number of penalties and Bi is an integer')            
+        if  mode in ['brandom','fixed-brand'] and argc < i+1:
+            raise Exception('Usage of mp mode - brandom(or fixed-brand): -m brandom <bias> , <bias> is of the form B1#B2#...#Bk where k is the number of penalties and Bi is an integer')
+        if mode in ['brandom','fixed-brand']:
+            randbias =  [int(p) for p in sys.argv[i+1].split('#')]
+            if len(randbias) != len(penalties):
+                raise Exception('Usage of mp mode - brandom: -m brandom <bias> , <bias> is of the form B1#B2#...#Bk where k is the number of penalties and Bi is an integer')            
     except ValueError:
         pass    
-    return trace_path,new_trace_path,penalties,delimiter,f
+    return trace_path,new_trace_path,penalties,delimiter,mode,randbias,f
 
 if __name__ == "__main__":
     trace_path,new_trace_path,penalties,delimiter,mode,randbias,f = parse_args(len(sys.argv) - 1)
     og_trace = open(trace_path)
-    new_trace = open(new_trace_path,'x')
-    get_mp = mp_generator(mode,randbias)
+    new_trace = open(new_trace_path,'w')
+    get_mp = mp_generator(mode,penalties,randbias)
     get_key = line_parser(f)
     line = og_trace.readline()
     while line:
