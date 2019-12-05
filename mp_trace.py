@@ -80,11 +80,24 @@ def parse_args(argc):
     mode = 'random'
     f = 'lirs'
     randbias = None
+    seed = 0
     try:
         i = sys.argv.index('-p') + 1
         if argc < i:
             raise Exception('Usage of penalties: -p N1#N2#N3#N4#..,#Nk , Ni is a integer representing a miss penalty')
         penalties = [p+'\n' for p in sys.argv[i].split('#')] 
+        if len(penalties) < 1:
+            raise Exception('Usage of penalties: must contain et least one miss penalty value')
+    except ValueError:
+        pass
+    try:
+        i = sys.argv.index('-s') + 1
+        if argc < i:
+            raise Exception('Usage of seed: -s <seed> , <seed> is a integer')
+        try:
+            seed = int(sys.argv[i])
+        except ValueError:
+            raise Exception('Usage of seed: -s <seed> , <seed> is a integer')
         if len(penalties) < 1:
             raise Exception('Usage of penalties: must contain et least one miss penalty value')
     except ValueError:
@@ -120,10 +133,11 @@ def parse_args(argc):
                 raise Exception('Usage of mp mode - brandom: -m brandom <bias> , <bias> is of the form B1#B2#...#Bk where k is the number of penalties and Bi is an integer')            
     except ValueError:
         pass    
-    return trace_path,new_trace_path,penalties,delimiter,mode,randbias,f
+    return trace_path,new_trace_path,penalties,delimiter,mode,randbias,f,seed
 
 if __name__ == "__main__":
-    trace_path,new_trace_path,penalties,delimiter,mode,randbias,f = parse_args(len(sys.argv) - 1)
+    trace_path,new_trace_path,penalties,delimiter,mode,randbias,f,seed = parse_args(len(sys.argv) - 1)
+    random.seed(seed)
     og_trace = open(trace_path)
     new_trace = open(new_trace_path,'w')
     get_mp = mp_generator(mode,penalties,randbias)
@@ -137,3 +151,4 @@ if __name__ == "__main__":
         line = og_trace.readline()
     og_trace.close()
     new_trace.close()
+    #TODO: add support for commpression 
