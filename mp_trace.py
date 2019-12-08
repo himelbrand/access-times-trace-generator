@@ -76,6 +76,7 @@ def parse_args(argc):
     trace_path = sys.argv[1]
     new_trace_path = 'mp'+trace_path
     penalties = ['200\n','400\n','800\n','1600\n','3200\n']
+    hit_penalty = None
     delimiter = ' '
     mode = 'random'
     f = 'lirs'
@@ -88,6 +89,16 @@ def parse_args(argc):
         penalties = [p+'\n' for p in sys.argv[i].split('#')] 
         if len(penalties) < 1:
             raise Exception('Usage of penalties: must contain et least one miss penalty value')
+    except ValueError:
+        pass
+    try:
+        i = sys.argv.index('-hp') + 1
+        if argc < i:
+            raise Exception('Usage of hit penalty: -hp <hit-penalty> , <hit-penalty> is a integer representing the hit penalty')
+        hit_penalty = sys.argv[i]
+        if min([int(p) for p in penalties]) < int(hit_penalty):
+            raise Exception('the lowest miss penalty shouldn\'t be lower than hit-penalty={}'.format(hit_penalty))
+        new_trace_path = 'h'+new_trace_path
     except ValueError:
         pass
     try:
@@ -133,20 +144,21 @@ def parse_args(argc):
                 raise Exception('Usage of mp mode - brandom: -m brandom <bias> , <bias> is of the form B1#B2#...#Bk where k is the number of penalties and Bi is an integer')            
     except ValueError:
         pass    
-    return trace_path,new_trace_path,penalties,delimiter,mode,randbias,f,seed
+    return trace_path,new_trace_path,penalties,delimiter,mode,randbias,f,seed,hit_penalty
 
 if __name__ == "__main__":
-    trace_path,new_trace_path,penalties,delimiter,mode,randbias,f,seed = parse_args(len(sys.argv) - 1)
+    trace_path,new_trace_path,penalties,delimiter,mode,randbias,f,seed,hp = parse_args(len(sys.argv) - 1)
     random.seed(seed)
     og_trace = open(trace_path)
     new_trace = open(new_trace_path,'w')
     get_mp = mp_generator(mode,penalties,randbias)
     get_key = line_parser(f)
     line = og_trace.readline()
+    hp_text = '' if hp is None else delimiter+hp
     while line:
         mp = get_mp(get_key(line))
         line = line.rstrip()
-        new_trace.write(line+delimiter+mp)
+        new_trace.write(line+hp_text+delimiter+mp)
         mp = random.choice(penalties)
         line = og_trace.readline()
     og_trace.close()
