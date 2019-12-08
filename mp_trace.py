@@ -202,7 +202,7 @@ if __name__ == "__main__":
         line = line.rstrip()
         if get_size:
             size = get_size(get_key(line))
-            new_trace.write(line+delimiter+size+delimiter+hp_text+delimiter+mp)
+            new_trace.write(line+delimiter+size+hp_text+delimiter+mp)
         else:
             new_trace.write(line+hp_text+delimiter+mp)
         line = og_trace.readline()
