@@ -25,7 +25,7 @@ def line_parser(f):
                     return None
             return url      
         return parse_url
-    
+pen_d = {}    
 def mp_generator(m,p,b):
     if p == None:
         return None
@@ -38,7 +38,7 @@ def mp_generator(m,p,b):
             i = (i+1)%len(p)
             return p[i]
         return next_p
-    pen_d = {}
+    
     if m == 'fixed-rand':
         def next_p(line):
             pen = pen_d.get(line)
@@ -76,7 +76,7 @@ def parse_args(argc):
     if argc < 1:
         raise Exception('Usage: mp_trace.py <trace_file_path> [optional args]')
     trace_path = sys.argv[1]
-    new_trace_path = 'mp'+trace_path
+    new_trace_path = 'mp1'+trace_path
     penalties = ['200\n','400\n','800\n','1600\n','3200\n']
     hit_penalty = None
     delimiter = ' '
@@ -131,8 +131,6 @@ def parse_args(argc):
             if argc < i:
                 raise Exception('Usage of hit penalty: -hp <hit-penalty> , <hit-penalty> is a integer representing the hit penalty')
             hit_penalty = sys.argv[i]
-            if min([int(p) for p in penalties]) < int(hit_penalty):
-                raise Exception('the lowest miss penalty shouldn\'t be lower than hit-penalty={}'.format(hit_penalty))
             new_trace_path = 'h'+new_trace_path
         except ValueError:
             pass
@@ -208,4 +206,5 @@ if __name__ == "__main__":
         line = og_trace.readline()
     og_trace.close()
     new_trace.close()
+    print(len(pen_d))
     #TODO: add support for commpression 
