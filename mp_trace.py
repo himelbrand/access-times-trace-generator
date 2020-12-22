@@ -29,9 +29,9 @@ pen_d = {}
 def mp_generator(m,p,b):
     if p == None:
         return None
-    if m == 'random':
+    elif m == 'random':
         return lambda _: random.choice(p)
-    if m == 'rr':
+    elif m == 'rr':
         i = -1
         def next_p(_):
             nonlocal i
@@ -39,7 +39,7 @@ def mp_generator(m,p,b):
             return p[i]
         return next_p
     
-    if m == 'fixed-rand':
+    elif m == 'fixed-rand':
         def next_p(line):
             pen = pen_d.get(line)
             if pen == None:
@@ -47,7 +47,7 @@ def mp_generator(m,p,b):
                 pen_d[line] = pen
             return pen
         return next_p
-    if m == 'fixed-rr':
+    elif m == 'fixed-rr':
         i = -1
         def next_p(line):
             nonlocal i
@@ -58,10 +58,10 @@ def mp_generator(m,p,b):
                 pen =  p[i]
             return pen
         return next_p
-    if m == 'brandom':
+    elif m == 'brandom':
         p = flatten([[pen]*b[i] for i,pen in enumerate(p)])
         return lambda _: random.choice(p)
-    if m == 'fixed-brand':
+    elif m == 'fixed-brand':
         p = flatten([[pen]*b[i] for i,pen in enumerate(p)])
         def next_p(line):
             pen = pen_d.get(line)
