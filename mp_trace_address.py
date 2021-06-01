@@ -1,16 +1,10 @@
 import sys
 import random
 from functools import reduce
-from calc_thresholds import calcThresholds
+import math
+from collections import Counter
+
 read_times = {
-    # 'HDD1':{
-    #     'name':'WD Black 6TB (2015)',
-    #     'min':1.6,
-    #     'avg':4.51,
-    #     'max':6.96,
-    #     'rl':4.167,
-    #     'st':8.5
-    # },
     'HDD1':{
         'name':'WD VelociRaptor 1TB',
         'min':1.23,
@@ -35,20 +29,6 @@ read_times = {
         'rl':4.1,
         'st':13
     },
-    # 'HDD2':{
-    #     'name':'WD Blue 6TB (2015)',
-    #     'min':0.6,
-    #     'avg':0.91,
-    #     'max':1.1,
-    #     'rl':5.56
-    # },
-    # 'HDD3':{
-    #     'name':'WD Red 10TB (2017)',
-    #     'min':1.2,
-    #     'avg':1.94,
-    #     'max':2.6,
-    #     'rl':5.56
-    # },
     'SSD1':{
         'name':'WD Black SN750 NVMe PCIe M.2 500GB (2019)',
         'min':36.8,
@@ -65,22 +45,66 @@ read_times = {
     }
 }
 
+def calc_thresholds(flag=False):
+    trace = 'input/' + sys.argv[1]
+    portions = [int(p) for p in sys.argv[2].split('#')]
+    s = sum(portions)
+    fracs = [p/s for p in portions]
+    fracs = [x+(sum(fracs[:i]) if i > 0 else 0) for i,x in zip(range(len(fracs)),fracs)]
+    print(fracs)
+    addresses = set()
+    with open(trace) as f:
+        line = f.readline()
+        while line:
+            if 'format=gradle' in sys.argv:
+                address = [int(line.split()[0],16)]
+            elif 'format=address' in sys.argv:
+                address = [int(line.split()[1],16)]
+            elif 'format=arc' in sys.argv:
+                address = range(int(line.split()[0]),int(line.split()[0])+int(line.split()[1]))
+            elif 'format=oltp' in sys.argv:
+                address = [int(line.split(',')[1])]
+            elif 'format=lirs' in sys.argv:
+                address = [int(line)]
+            else:
+                address = [int(line.split()[-1],16)]
+            for a in address:
+                addresses.add(a)
+            line = f.readline()
+    addresses = list(addresses)
+    addresses.sort()
+    ths = [addresses[int(len(addresses)*f) if f<1.0 else -1] for f in fracs]
+    count = Counter()
+    for a in addresses:
+        for t in ths:
+            if a <= t:
+                count[str(t)] += 1
+                break
+    if flag:
+        print('#'.join([str(t) for t in ths]))
+        print(len(addresses))
+        print(count)
+    else:
+        return ths
+
+
 if __name__ == "__main__":
     input_file = 'input/'+sys.argv[1]
-    ths = calcThresholds()
+    ths = calc_thresholds()
     drives = sys.argv[3].split('#')
-    block_sizes = [512,1024,4098,1048576]
-    size_names = ['512b','4kb']#['512b','1kb','4kb','1mb']
-    hps = ['0.225','1.1']#['0.225','0.35','1.1','250.1']
+    block_sizes = [4098]
+    size_names = ['4kb']
+    hps = ['1.1']
     if '-s' in sys.argv:
         seed = sys.argv[sys.argv.index('-s') + 1]
     else:
-        seed = 27021991
+        seed = 27021990
     random.seed(seed)
     with open(input_file) as f:
         for ext_name,block_size,hp in zip(size_names,block_sizes,hps):
+            hp = float(hp)
             f.seek(0)
-            out_file = 'out_ths/hmp_2_%s_'%ext_name+sys.argv[1]
+            out_file = 'out_ths/%s'%ext_name+sys.argv[1]
             with open(out_file,'w') as out:
                 line = f.readline()
                 while line:
@@ -114,60 +138,9 @@ if __name__ == "__main__":
                             mp += read_times[drive]['rl']*1000 + read_times[drive]['st']*1000
                         else:
                             mp += read_times[drive]['st']
-                        out.write(str(address)+' %s %.2f'%(hp,mp)+'\n')
+                        flip = random.random()
+                        hit_time = hp*flip if flip > 0.95 else hp*(1.0+flip) if flip > 0.1 else hp*(2.0+flip) 
+                        out.write(str(address)+' %.2f %.2f'%(hit_time,mp)+'\n')
                     line = f.readline()
     #TODO: add support for commpression 
     
-    #gradle ths: 56767721354031354533962668594282754802#170318962904182302937531091057095545710#340281991432906288356376217369192469966
-    #gradle mps: 150#20004#20044
-    #gradle hp: 1.1
-    #gradle entry size: 4KB
-    #gradle partition: SSD=16.667% HDD_local=33.3333% HDD_remote=50%
-    #gradle trace cmd: python3 mp_trace_address.py build-cache 56767721354031354533962668594282754802#170318962904182302937531091057095545710#340281991432906288356376217369192469966 150#20004#20044 1.1 format=gradle -o hmp_4kb_gradle.trace
-    
-    #gradle ths: 56767721354031354533962668594282754802#170318962904182302937531091057095545710#340281991432906288356376217369192469966
-    #gradle mps: 37.5#20001#20011
-    #gradle hp: 0.35
-    #gradle entry size: 1KB
-    #gradle partition: SSD=16.667% HDD_local=33.3333% HDD_remote=50%
-    #gradle trace cmd: python3 mp_trace_address.py build-cache 56767721354031354533962668594282754802#170318962904182302937531091057095545710#340281991432906288356376217369192469966 37.5#20001#20011 0.35 format=gradle -o hmp_1kb_gradle.trace
-    
-    #gradle ths: 56767721354031354533962668594282754802#170318962904182302937531091057095545710#340281991432906288356376217369192469966
-    #gradle mps: 18.75#20000.5#20005.5
-    #gradle hp: 0.225
-    #gradle entry size: 512B
-    #gradle partition: SSD=16.667% HDD_local=33.3333% HDD_remote=50%
-    #gradle trace cmd: python3 mp_trace_address.py build-cache 56767721354031354533962668594282754802#170318962904182302937531091057095545710#340281991432906288356376217369192469966 18.75#20000.5#20005.5 0.225 format=gradle -o hmp_512b_gradle.trace
-    
-    #gcc ths: 805686080#4294967295
-    #gcc mps: 150#20004
-    #gcc hp: 1.1
-    #gcc entry size: 4KB
-    #gcc partition: SSD=1/4 HDD=3/4
-    #gcc trace cmd: python3 mp_trace_address.py gcc.trace 805686080#4294967295 150#20004 1.1 -o hmp_4kb_gcc.trace format=address 
-    
-    #gcc ths: 805686080#4294967295
-    #gcc mps: 37.5#20001
-    #gcc hp: 0.35
-    #gcc entry size: 1KB
-    #gcc partition: SSD=1/4 HDD=3/4
-    #gcc trace cmd: python3 mp_trace_address.py gcc.trace 805686080#4294967295 37.5#20001 0.35 -o hmp_1kb_gcc.trace format=address 
-    
-    #ps8 ths: 1066230#8308682
-    #ps8 mps: 18.75#20000.5
-    #ps8 hp: 0.225
-    #ps8 entry size: 512B
-    #ps8 partition: SSD=1/4 HDD=3/4
-    #ps8 trace cmd: python3 mp_trace_address.py P8.lis 1066230#8308682 18.75#20000.5 0.225 format=arc -o hmp_512b_P8.trace
-    
-    #ps12 ths: 1575016#10272280
-    #ps12 mps: 18.75#20000.5
-    #ps12 hp: 0.225
-    #ps12 entry size: 512B
-    #ps12 partition: SSD=1/4 HDD=3/4
-    #ps12 trace cmd: python3 mp_trace_address.py P12.lis 1575016#10272280 18.75#20000.5 0.225 format=arc -o hmp_512b_P12.trace
-
-    ### new format
-
-    ###Gradle
-    #python mp_trace_address.py build-cache 56767721354031354533962668594282754802#170318962904182302937531091057095545710#340281991432906288356376217369192469966 SSD1#HDD2#HDD3 format=gradle
